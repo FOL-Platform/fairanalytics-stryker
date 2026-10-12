@@ -18,6 +18,7 @@
         e.preventDefault(); const btn=document.getElementById('login-button');btn.disabled=true;
         const {error}=await sb.auth.signInWithPassword({email:document.getElementById('email').value.trim(),password:document.getElementById('password').value});
         btn.disabled=false; if(error) return show(friendly(error));
+        show('Login successful. Opening your Stryker workspace…','ok');
         window.location.assign(to('dashboard.html'));
       });
       document.getElementById('forgot-button').addEventListener('click',async()=>{
@@ -57,7 +58,8 @@
       if(!session){window.location.replace(to('index.html'));return;}
       // Check territory assignment with user's JWT; RLS blocks cross-territory reads.
       const {data,error}=await sb.from('territory_access').select('access_role,territories!inner(territory_name,customer_name)').eq('user_id',session.user.id).eq('territories.customer_name','Stryker').eq('territories.territory_name','New England').limit(1);
-      if(error||!data?.length){await sb.auth.signOut();window.location.replace(to('index.html'));return;}
+      if (error) { document.getElementById('loading-content').innerHTML = '<h2>Unable to verify territory access</h2><p id="access-error"></p><p><a href="index.html">Back to sign in</a></p>'; document.getElementById('access-error').textContent = error.message; return; }
+      if (!data?.length) { document.getElementById('loading-content').innerHTML = '<h2>Account authenticated — access not assigned</h2><p>Your login worked, but this account is not yet assigned to Stryker New England. Ask the administrator to add your user to territory_access.</p><p><a href="index.html">Back to sign in</a></p>'; return; }
       document.getElementById('signed-in-as').textContent=`${session.user.email} · ${data[0].access_role} access`;
       document.getElementById('loading-content').classList.add('hidden');
       document.getElementById('dashboard-content').classList.remove('hidden');
